@@ -1,19 +1,18 @@
-from keyboard import Keyboard
+# import keyboard as Keyboard
+# Keyboard.key = Keyboard.press_and_release
+import os
+
+if os.name == 'nt':
+    from _nt import get_volume_device
+else:
+    raise NotImplementedError('Only available in Windows for the moment')
 
 
 class Sound:
     """
     Class Sound
-    :author: Paradoxis <luke@paradoxis.nl>
-    :description:
-
-    Allows you control the Windows volume
-    The first time a sound method is called, the system volume is fully reset.
-    This triggers sound and mute tracking.
+    :description: Based on the class written by Paradoxis <luke@paradoxis.nl>, but using the Windows API
     """
-
-    # Current volume, we will set this to 100 once initialized
-    __current_volume = None
 
     @staticmethod
     def current_volume():
@@ -21,25 +20,16 @@ class Sound:
         Current volume getter
         :return: int
         """
-        if Sound.__current_volume is None:
-            return 0
-        else:
-            return Sound.__current_volume
+        return get_volume_device().current
 
     @staticmethod
     def __set_current_volume(volume):
         """
-        Current volumne setter
-        prevents numbers higher than 100 and numbers lower than 0
+        Current volume setter
+        Volume is sanitized in the device setter
         :return: void
         """
-        if volume > 100:
-            Sound.__current_volume = 100
-        elif volume < 0:
-            Sound.__current_volume = 0
-        else:
-            Sound.__current_volume = volume
-
+        get_volume_device().current = volume
 
     # The sound is not muted by default, better tracking should be made
     __is_muted = False
@@ -50,8 +40,7 @@ class Sound:
         Is muted getter
         :return: boolean
         """
-        return Sound.__is_muted
-
+        return get_volume_device().mute
 
     @staticmethod
     def __track():
@@ -59,11 +48,7 @@ class Sound:
         Start tracking the sound and mute settings
         :return: void
         """
-        if Sound.__current_volume == None:
-            Sound.__current_volume = 0
-            for i in range(0, 50):
-                Sound.volume_up()
-
+        pass
 
     @staticmethod
     def mute():
@@ -72,9 +57,7 @@ class Sound:
         Done by triggering a fake VK_VOLUME_MUTE key event
         :return: void
         """
-        Sound.__track()
-        Sound.__is_muted = (not Sound.__is_muted)
-        Keyboard.key(Keyboard.VK_VOLUME_MUTE)
+        get_volume_device().mute = not get_volume_device().mute
 
     @staticmethod
     def volume_up():
@@ -83,9 +66,7 @@ class Sound:
         Done by triggering a fake VK_VOLUME_UP key event
         :return: void
         """
-        Sound.__track()
-        Sound.__set_current_volume(Sound.current_volume() + 2)
-        Keyboard.key(Keyboard.VK_VOLUME_UP)
+        get_volume_device().increase()
 
     @staticmethod
     def volume_down():
@@ -94,10 +75,7 @@ class Sound:
         Done by triggering a fake VK_VOLUME_DOWN key event
         :return: void
         """
-        Sound.__track()
-        Sound.__set_current_volume(Sound.current_volume() - 2)
-        Keyboard.key(Keyboard.VK_VOLUME_DOWN)
-
+        get_volume_device().decrease()
 
     @staticmethod
     def volume_set(amount):
@@ -107,14 +85,7 @@ class Sound:
         or decreases the volume by two every single time.
         :return: void
         """
-        Sound.__track()
-
-        if Sound.current_volume() > amount:
-            for i in range(0, int((Sound.current_volume() - amount) / 2)):
-                Sound.volume_down()
-        else:
-            for i in range(0, int((amount - Sound.current_volume()) / 2)):
-                Sound.volume_up()
+        get_volume_device().current = amount
 
     @staticmethod
     def volume_min():
@@ -122,7 +93,7 @@ class Sound:
         Set the volume to min (0)
         :return: void
         """
-        Sound.volume_set(0)
+        get_volume_device().current = 0
 
     @staticmethod
     def volume_max():
@@ -130,4 +101,4 @@ class Sound:
         Set the volume to max (100)
         :return: void
         """
-        Sound.volume_set(100)
+        get_volume_device().current = 100
